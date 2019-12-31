@@ -1,0 +1,19 @@
+{
+  "name": "@barebone/common",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "license": "MIT",
+  "scripts": {
+    "build": "rm -rf ./dist && tsc"
+  },
+  "devDependencies": {
+    "@types/yup": "^0.26.27",
+    "tslint": "^5.20.1",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.6.1-rc"
+  },
+  "dependencies": {
+    "yup": "^0.28.0"
+  }
+}

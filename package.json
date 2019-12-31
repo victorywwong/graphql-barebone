@@ -1,0 +1,27 @@
+{
+    "private": true,
+    "scripts":{
+        "build:server": "lerna run build --scope={@barebone/common,@barebone/server}"
+    },
+    "workspaces": {
+        "packages": [
+            "packages/*"
+        ],
+        "nohoist": [
+            "/jest",
+            "/babel-jest",
+            "**/jest",
+            "**/babel-jest",
+            "**/jest/**",
+            "**/babel-jest/**",
+            "**/graphql",
+            "**/apollo-server-core",
+            "**/apollo-server-express",
+            "**/graphql-yoga"
+        ]
+    },
+    "name": "graphql-barebone",
+    "devDependencies": {
+        "lerna": "^3.19.0"
+    }
+}
