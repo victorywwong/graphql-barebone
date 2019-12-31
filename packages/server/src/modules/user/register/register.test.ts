@@ -12,7 +12,7 @@ import {
 //   emailNotLongEnough,
 //   invalidEmail,
 //   passwordNotLongEnough
-// } from "@airbnb/common";
+// } from "@barebone/common";
 import { TestClient } from "../../../utils/TestClient";
 import { createTestConn } from "../../../testUtils/createTestConn";
 

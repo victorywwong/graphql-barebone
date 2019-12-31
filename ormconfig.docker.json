@@ -1,0 +1,21 @@
+{
+    "name": "production",
+    "type": "postgres",
+    "host": "db",
+    "port": 5432,
+    "username": "barebone-db-user",
+    "password": "barebone-db-pw",
+    "database": "postgres-barebone",
+    "synchronize": true,
+    "logging": true,
+    "entities": ["dist/entity/**/*.js"],
+    "migrations": ["dist/migration/**/*.js"],
+    "subscribers": ["dist/subscriber/**/*.js"],
+    "cli": {
+    "entitiesDir": "dist/entity",
+    "migrationsDir": "dist/migration",
+    "subscribersDir": "dist/subscriber"
+    }
+}
+
+  

@@ -12,6 +12,7 @@ COPY ./packages/server/dist ./packages/server/dist
 COPY ./packages/common/dist ./packages/common/dist
 COPY ./packages/server/.env.prod ./packages/server/.env
 COPY ./ormconfig.json .
+# COPY ./ormconfig.docker.json ./ormconfig.json ## DOCKER COMPOSE ONLY
 
 WORKDIR /barebone/packages/server
 
