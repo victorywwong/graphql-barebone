@@ -1,0 +1,173 @@
+# redis
+--- 
+    apiVersion: v1
+    kind: Service
+    metadata: 
+      labels: 
+        app: redis
+      name: redis
+      namespace: airbnb
+    spec: 
+      clusterIP: None
+      ports:
+      - name: redis-service
+        port: 6379
+        targetPort: 6379
+      selector: 
+        app: redis
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: redis
+      labels:
+        app: redis
+      namespace: airbnb
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: redis
+      template:
+        metadata:
+          labels:
+            app: redis
+        spec:
+          containers:
+          - name: redis
+            image: redis:alpine
+            args: ["--requirepass", "$(REDIS_PASS)"]
+            env:
+              - name: REDIS_PASS
+                valueFrom:
+                  secretKeyRef:
+                    name: redis
+                    key: REDIS_PASS
+            ports:
+            - containerPort: 6379
+              name: redis
+            volumeMounts:
+              - mountPath: /data
+                name: redis
+          volumes:
+          - name: redis
+    # db
+    --- 
+    apiVersion: v1
+    kind: Service
+    metadata: 
+      labels: 
+        app: db
+      name: db
+      namespace: airbnb
+    spec: 
+      clusterIP: None
+      ports: 
+      - name: db
+        port: 5432
+        targetPort: 5432
+      selector: 
+        app: db
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: db
+      labels:
+        app: db
+      namespace: airbnb
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: db
+      template:
+        metadata:
+          labels:
+            app: db
+        spec:
+          containers:
+          - name: db
+            image: postgres:11.2-alpine
+            env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: DB_PASS
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: DB_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: DB_DB
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            ports:
+            - containerPort: 5432
+              name: db
+            volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          volumes:
+          - name: pgdata
+            persistentVolumeClaim:
+              claimName: postgres-pv-claim
+    ---
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: postgres-pv-claim
+      namespace: airbnb
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+    
+    # airbnbbackend
+    ---
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: airbnbbackend
+      labels:
+        app: airbnbbackend
+      namespace: airbnb
+    spec:
+      type: LoadBalancer
+      ports:
+      - port: 4000
+        targetPort: 4000
+        name: airbnbbackend-service
+      selector:
+        app: airbnbbackend
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: airbnbbackend
+      labels:
+        app: airbnbbackend
+      namespace: airbnb
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: airbnbbackend
+      template:
+        metadata:
+          labels:
+            app: airbnbbackend
+        spec:
+          containers:
+          - name: airbnbbackend
+            image: vywwong/airbnb:latest
+            ports:
+            - containerPort: 4000
+              name: airbnbbackend

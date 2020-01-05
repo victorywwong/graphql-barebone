@@ -1,18 +1,32 @@
 version: "3.7"
 services:
     db:
-        image: postgres
+        image: postgres:11.2-alpine
+        restart: always
         environment: 
             POSTGRES_PASSWORD: barebone-db-pw
             POSTGRES_USER: barebone-db-user
-            POSTGRES_DB: postgres-barebone
+            POSTGRES_DB: barebone-db
         volumes:
-            - ./pgdata:/var/lib/postgresql/data
+            - pgdata:/var/lib/postgresql/data
         ports:
             - '5432:5432'
-    web:
-        image: barebone
+    redis:
+        image: redis:4.0.5-alpine
+        restart: always
+        command: redis-server --requirepass barebone-red-pw
+        expose:
+            - '6379'
+        volumes:
+            - redis:/data
+    backend:
+        image: username/barebone:latest
         depends_on:
             - db
+            - redis
         ports:
             - '4000:4000'
+        restart: always
+volumes:
+    pgdata:    
+    redis:
