@@ -1,7 +1,11 @@
 {
     "private": true,
     "scripts":{
-        "build:server": "lerna run build --scope={@barebone/common,@barebone/server}"
+        "build:server": "lerna run build --scope={@barebone/server}",
+        "ci:test": "lerna run ci:test",
+        "ci:deploy": "lerna run ci:deploy --since $TAG",
+        "new-version": "lerna version --conventional-commits --yes"
+
     },
     "workspaces": {
         "packages": [

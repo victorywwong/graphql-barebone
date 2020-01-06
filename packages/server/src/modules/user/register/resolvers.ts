@@ -12,7 +12,7 @@ import {
 //   invalidEmail
 // } from "./errorMessages";
 // import { registerPasswordValidation } from "../../../yupSchemas";
-import { validUserSchema } from '@barebone/common';
+import { validUserSchema } from '../../../yupSchemas';
 import { createConfirmEmailLink } from "./createConfirmEmailLink";
 import { sendEmail } from "../../../utils/sendEmail";
 
