@@ -5,18 +5,16 @@ jobs:
       - image: node:11.10.1
       - image: circleci/postgres:11-alpine-ram
         environment:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: 
-          POSTGRES_DB: graphql-ts-server-boilerplate-airbnb-test
+          POSTGRES_USER: barebone-db-user
+          POSTGRES_PASSWORD: barebone-db-pw
+          POSTGRES_DB: barebone-db
       - image: redis:latest
-
+        command: redis-server --requirepass barebone-red-pw
     working_directory: ~/repo
-
     steps:
       - checkout:
           post:
             - git fetch --all
-
       - restore_cache:
           keys:
             # when lock file changes, use increasingly general patterns to restore cache
@@ -25,23 +23,20 @@ jobs:
             - yarn-packages-v1-
 
       - run: yarn install --freeze-lockfile
-
+      - save_cache:
+          paths:
+            - ~/repo
+          key: repo-v1-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
       - save_cache:
           paths:
             - ~/.cache/yarn
           key: yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
-
-      # run tests!
-      - run: yarn ci:test
-
+      
       - run: git config --global user.email $GITHUB_EMAIL
       - run: git config --global user.name $GITHUB_USER
-
       - run: yarn new-version
-
       - setup_remote_docker:
           docker_layer_caching: true
-
       - run:
           name: Install Docker client
           command: |
@@ -54,3 +49,87 @@ jobs:
       - run: echo 'export TAG=`git describe --abbrev=0 --tags $(git rev-list --tags --max-count=2) | sed -n 2p`' >> $BASH_ENV
       - run: echo $TAG
       - run: yarn ci:deploy
+  test:
+    docker:
+      - image: node:11.10.1
+      - image: circleci/postgres:11-alpine-ram
+        environment:
+          POSTGRES_USER: barebone-db-user
+          POSTGRES_PASSWORD: barebone-db-pw
+          POSTGRES_DB: barebone-db
+      - image: redis:latest
+        command: redis-server --requirepass barebone-red-pw
+    working_directory: ~/repo
+    steps:
+      - restore_cache:
+          keys:
+            - yarn-packages-v1-{{ .Branch }}-{{ checksum "yarn.lock" }}
+            - yarn-packages-v1-{{ .Branch }}-
+            - yarn-packages-v1-
+      - restore_cache:
+        keys:
+            - repo-v1-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}
+      # run tests!
+      - run: yarn ci:test
+      - persist_to_workspace:
+        root: ~/repo
+        paths:
+          - .
+  build_image_and_deploy_staging:
+    docker:
+      - image: circleci/python:3.7
+    working_directory: ~/repo
+    steps:
+      - run:
+        name: Install awscli and gettext-base
+        command: |
+          sudo pip3 install awscli
+      - run:
+          name: Install aws-iam-authenticator
+          command: |
+            curl -o aws-iam-authenticator curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.13.7/2019-06-11/bin/linux/amd64/aws-iam-authenticator
+            chmod +x ./aws-iam-authenticator
+            sudo mv ./aws-iam-authenticator /usr/local/bin/aws-iam-authenticator
+      - run:
+          name: Install kubectl
+          command: |
+            curl -o kubectl https://amazon-eks.s3-us-west-2.amazonaws.com/1.13.7/2019-06-11/bin/linux/amd64/kubectl
+            chmod +x ./kubectl
+            sudo mv ./kubectl /usr/local/bin/kubectl
+
+      - setup_remote_docker
+
+      - run:
+          name: Login to repository and build docker image
+          command: |
+            eval $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+            docker build -t ${AWS_REPOSITORY_URL}/${REPOSITORY_NAME}:${CIRCLE_BRANCH}-${CIRCLE_BUILD_NUM} .
+            docker push ${AWS_REPOSITORY_URL}/${REPOSITORY_NAME}:${CIRCLE_BRANCH}-${CIRCLE_BUILD_NUM}
+      - run:
+          name: Prepare K8S templates
+          command: |
+            aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $CLUSTER_NAME
+            rm -rf .k8s/.generated && mkdir -p .k8s/.generated
+            for f in .k8s/templates/staging.yml
+              do
+              envsubst < $f > ".k8s/.generated/$(basename $f)"
+            done
+      - run:
+          name: Deploy
+          command: |
+            kubectl apply -f .k8s/.generated/ --validate=true
+            kubectl get pod
+workflow:
+  build_test_deploy:
+    jobs:
+      - setup
+      - test:
+          requires:
+           - setup
+      - build_image_and_deploy_staging:
+          requires:
+            - test
+          filters:
+            branches:
+              only:
+                - master
